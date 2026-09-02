@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Ledger of Coin and Expense | Grand Victorian Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-parchment: #fdf6e7;
+            --bg-parchment-dark: #f0deba;
+            --bg-parchment-light: #fffdf9;
+            --ink-main: #1f1207;
+            --ink-muted: #5e3b1c;
+            --gold-bright: #f3c244;
+            --gold-burnished: #c59325;
+            --gold-dark: #7a520e;
+            --accent-red: #c92a2a;
+            --accent-red-glow: #ff5252;
+            --accent-green: #087f5b;
+            --accent-green-glow: #12b886;
+            --card-bg: rgba(253, 246, 231, 0.94);
+            --shadow-gold: 0 0 25px rgba(243, 194, 68, 0.25);
+            --shadow-deep: 0 20px 50px rgba(0, 0, 0, 0.65);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Playfair Display', Georgia, serif;
+            color: var(--ink-main);
+        }
+
+        ::-webkit-scrollbar { width: 9px; height: 9px; }
+        ::-webkit-scrollbar-track { background: var(--bg-parchment-dark); }
+        ::-webkit-scrollbar-thumb { 
+            background: linear-gradient(180deg, var(--gold-burnished), var(--gold-dark)); 
+            border-radius: 3px; 
+            border: 1px solid var(--gold-bright);
+        }
+
+        body {
+            background-color: #100a04;
+            background-image: 
+                radial-gradient(circle at 50% 10%, #3e1b0c 0%, #170903 60%, #080301 100%),
+                radial-gradient(ellipse at 80% 90%, rgba(197, 147, 37, 0.15) 0%, transparent 60%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 15px;
+        }
+
+        .ledger-container {
+            width: 100%;
+            max-width: 1260px;
+            background: var(--bg-parchment);
+            background-image: 
+                radial-gradient(ellipse at center, #fffdf8 30%, #f6e6c4 100%),
+                linear-gradient(to right, rgba(197, 147, 37, 0.08) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(197, 147, 37, 0.08) 1px, transparent 1px);
+            background-size: 100% 100%, 22px 22px, 22px 22px;
+            border: 4px solid var(--gold-burnished);
+            box-shadow: var(--shadow-deep), var(--shadow-gold), inset 0 0 120px rgba(197, 147, 37, 0.22);
+            border-radius: 6px;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            position: relative;
+        }
+
+        .corner-ornament {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            pointer-events: none;
+            user-select: none;
+        }
+        .corner-tl { top: 14px; left: 16px; }
+        .corner-tr { top: 14px; right: 16px; }
+
+        .flourish-divider {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 6px 0 10px 0;
+            user-select: none;
+            pointer-events: none;
+        }
+
+        .gold-diamond {
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            background: var(--gold-bright);
+            border: 1px solid var(--gold-dark);
+            transform: rotate(45deg);
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        .screen {
+            display: none;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity 0.35s ease, transform 0.35s ease;
+        }
+
+        .screen.active {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .ledger-header {
+            text-align: center;
+            border-bottom: 2px solid var(--gold-burnished);
+            padding-bottom: 20px;
+            position: relative;
+            z-index: 50;
+        }
+
+        .ledger-header h1 {
+            font-family: 'Cinzel', serif;
+            font-size: clamp(2rem, 4.5vw, 3rem);
+            font-weight: 900;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            background: linear-gradient(180deg, #3d1c02 0%, #1f0b00 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 2px 2px rgba(243, 194, 68, 0.4));
+        }
+
+        .sub-header-quote {
+            font-style: italic;
+            font-size: 1.05rem;
+            color: var(--ink-muted);
+            margin-top: 5px;
+            font-weight: 600;
+        }
+
+        .nav-ribbon {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 18px;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 60;
+        }
+
+        .vintage-btn {
+            background: linear-gradient(180deg, #f9eed4 0%, #e2c488 100%);
+            border: 1px solid var(--gold-burnished);
+            padding: 10px 22px;
+            font-family: 'Cinzel', serif;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            color: var(--ink-main);
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15), inset 0 1px 2px rgba(255,255,255,0.8);
+            border-radius: 3px;
+            transition: all 0.2s ease;
+            position: relative;
+            z-index: 70;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        .vintage-btn:hover {
+            background: linear-gradient(180deg, #fce09b 0%, #cfa13e 100%);
+            border-color: var(--gold-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(197, 147, 37, 0.4);
+        }
+
+        .vintage-btn:active {
+            transform: translateY(1px);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .vintage-btn.active {
+            background: linear-gradient(180deg, #341f11 0%, #150902 100%);
+            color: var(--gold-bright);
+            border-color: var(--gold-bright);
+            box-shadow: 0 0 12px rgba(243, 194, 68, 0.5), inset 0 0 6px rgba(0,0,0,0.8);
+        }
+
+        .vintage-btn.danger {
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+        }
+
+        .vintage-btn.danger:hover {
+            background: linear-gradient(180deg, #e03131 0%, #9b1111 100%);
+            color: #fff;
+            border-color: #5f0808;
+            box-shadow: 0 4px 12px rgba(201, 42, 42, 0.45);
+        }
+
+        .home-content {
+            text-align: center;
+            padding: 30px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 25px;
+        }
+
+        .home-banner {
+            font-family: 'Cinzel', serif;
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: #fff;
+            background: linear-gradient(90deg, #7a1f1d, #c92a2a, #7a1f1d);
+            border: 1px solid var(--gold-bright);
+            box-shadow: 0 3px 12px rgba(201, 42, 42, 0.35);
+            padding: 9px 30px;
+            border-radius: 2px;
+        }
+
+        .home-text {
+            max-width: 760px;
+            font-size: 1.2rem;
+            line-height: 1.85;
+            color: var(--ink-muted);
+            font-style: italic;
+        }
+
+        .home-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 22px;
+            width: 100%;
+            margin-top: 10px;
+            text-align: left;
+        }
+
+        .home-box {
+            background: var(--card-bg);
+            border: 1px solid var(--gold-burnished);
+            border-top: 5px solid var(--gold-burnished);
+            padding: 24px;
+            box-shadow: 0 6px 16px rgba(45, 25, 10, 0.1), inset 0 0 20px rgba(243, 194, 68, 0.1);
+            border-radius: 3px;
+        }
+
+        .home-box h4 {
+            font-family: 'Cinzel', serif;
+            font-size: 1.05rem;
+            margin-bottom: 8px;
+            color: var(--gold-dark);
+            display: flex;
+            align-items: center;
+        }
+
+        .home-box p {
+            font-size: 0.95rem;
+            color: var(--ink-muted);
+            line-height: 1.6;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 22px;
+        }
+
+        @media(max-width: 800px) {
+            .metrics-grid { grid-template-columns: 1fr; }
+        }
+
+        .metric-card {
+            background: var(--card-bg);
+            border: 1px solid var(--gold-burnished);
+            padding: 22px;
+            text-align: center;
+            box-shadow: 0 6px 18px rgba(40, 20, 5, 0.12);
+            position: relative;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .metric-card::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 4px;
+        }
+
+        .metric-card.income::after { background: linear-gradient(90deg, #087f5b, #20c997); }
+        .metric-card.expense::after { background: linear-gradient(90deg, #c92a2a, #ff6b6b); }
+        .metric-card.balance::after { background: linear-gradient(90deg, #c59325, #ffd43b); }
+
+        .metric-title {
+            font-family: 'Cinzel', serif;
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--ink-muted);
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .metric-amount {
+            font-family: 'Cinzel', serif;
+            font-size: 2.2rem;
+            font-weight: 900;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .metric-card.income .metric-amount { color: var(--accent-green); }
+        .metric-card.expense .metric-amount { color: var(--accent-red); }
+        .metric-card.balance .metric-amount { color: var(--ink-main); }
+
+        .ai-audit-panel {
+            background: linear-gradient(135deg, rgba(253, 246, 231, 0.98), rgba(240, 222, 186, 0.95));
+            border: 2px solid var(--gold-burnished);
+            box-shadow: 0 8px 24px rgba(40, 20, 5, 0.15), inset 0 0 35px rgba(243, 194, 68, 0.2);
+            padding: 24px 28px;
+            border-radius: 4px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .ai-audit-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--gold-burnished);
+            padding-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .ai-audit-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.15rem;
+            font-weight: 900;
+            color: var(--gold-dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .ai-header-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .ai-verdict-badge {
+            background: linear-gradient(180deg, #3d1c02 0%, #1f0b00 100%);
+            color: var(--gold-bright);
+            border: 1px solid var(--gold-burnished);
+            font-family: 'Cinzel', serif;
+            font-size: 0.78rem;
+            font-weight: 700;
+            padding: 4px 14px;
+            border-radius: 20px;
+            letter-spacing: 0.8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+        }
+
+        .re-audit-btn {
+            background: var(--bg-parchment-dark);
+            border: 1px solid var(--gold-burnished);
+            padding: 4px 12px;
+            font-family: 'Cinzel', serif;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--gold-dark);
+            cursor: pointer;
+            border-radius: 3px;
+            transition: all 0.2s;
+        }
+
+        .re-audit-btn:hover {
+            background: var(--gold-bright);
+            color: var(--ink-main);
+        }
+
+        .ai-commentary-text {
+            font-size: 1.08rem;
+            line-height: 1.75;
+            color: var(--ink-main);
+            font-style: italic;
+            position: relative;
+            padding-left: 20px;
+            border-left: 3px solid var(--gold-burnished);
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+        }
+
+        .workspace-grid {
+            display: grid;
+            grid-template-columns: 350px 1.2fr 1fr;
+            gap: 22px;
+        }
+
+        @media(max-width: 1100px) {
+            .workspace-grid { grid-template-columns: 1fr; }
+        }
+
+        .ledger-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--gold-burnished);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: 0 6px 18px rgba(40, 20, 5, 0.1);
+            border-radius: 4px;
+        }
+
+        .panel-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            border-bottom: 2px solid var(--gold-burnished);
+            padding-bottom: 8px;
+            letter-spacing: 0.5px;
+            color: var(--gold-dark);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .form-row {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-row label {
+            font-family: 'Cinzel', serif;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--ink-muted);
+        }
+
+        .parchment-input {
+            background: rgba(255, 255, 255, 0.85);
+            border: 1px solid var(--gold-burnished);
+            padding: 10px 12px;
+            font-size: 0.96rem;
+            color: var(--ink-main);
+            border-radius: 3px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .parchment-input:focus {
+            border-color: var(--gold-dark);
+            box-shadow: 0 0 8px rgba(243, 194, 68, 0.5);
+            background: #ffffff;
+        }
+
+        .type-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        .type-tab {
+            background: #ede0c2;
+            border: 1px solid var(--gold-burnished);
+            padding: 8px;
+            text-align: center;
+            font-family: 'Cinzel', serif;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .type-tab.active {
+            background: linear-gradient(180deg, #382012 0%, #170902 100%);
+            color: var(--gold-bright);
+            border-color: var(--gold-bright);
+            box-shadow: 0 0 8px rgba(243, 194, 68, 0.4);
+        }
+
+        .ai-preview-tag {
+            font-size: 0.8rem;
+            color: var(--gold-dark);
+            font-style: italic;
+            margin-top: 2px;
+        }
+
+        .quill-btn {
+            background: linear-gradient(180deg, #3a2213 0%, #1a0b02 100%);
+            color: var(--gold-bright);
+            border: 1px solid var(--gold-burnished);
+            padding: 12px;
+            font-family: 'Cinzel', serif;
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            cursor: pointer;
+            margin-top: 6px;
+            border-radius: 3px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .quill-btn:hover {
+            background: linear-gradient(180deg, #57331b 0%, #291204 100%);
+            border-color: var(--gold-bright);
+            box-shadow: 0 0 15px rgba(243, 194, 68, 0.45);
+            transform: translateY(-1px);
+        }
+
+        .quill-btn:active {
+            transform: translateY(1px);
+        }
+
+        .chart-box {
+            position: relative;
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 230px;
+        }
+
+        .no-data-notice {
+            font-style: italic;
+            color: var(--ink-muted);
+            font-size: 0.95rem;
+            text-align: center;
+            position: absolute;
+        }
+
+        .registry-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--gold-burnished);
+            padding: 24px;
+            box-shadow: 0 6px 18px rgba(40, 20, 5, 0.1);
+            border-radius: 4px;
+        }
+
+        .registry-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 14px;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+
+        .filters-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .registry-table-wrap {
+            max-height: 330px;
+            overflow-y: auto;
+            border: 1px solid var(--gold-burnished);
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 3px;
+        }
+
+        .registry-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.95rem;
+        }
+
+        .registry-table th {
+            font-family: 'Cinzel', serif;
+            font-size: 0.78rem;
+            background: linear-gradient(180deg, #faeed6 0%, #ebd3a6 100%);
+            border-bottom: 2px solid var(--gold-burnished);
+            padding: 10px 14px;
+            color: var(--gold-dark);
+            letter-spacing: 0.6px;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        .registry-table td {
+            padding: 10px 14px;
+            border-bottom: 1px dashed rgba(197, 147, 37, 0.5);
+        }
+
+        .registry-table tr:hover {
+            background: rgba(243, 194, 68, 0.18);
+        }
+
+        .category-badge {
+            background: rgba(197, 147, 37, 0.15);
+            border: 1px solid var(--gold-burnished);
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            color: var(--gold-dark);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .amount-col.income { color: var(--accent-green); font-weight: 700; }
+        .amount-col.expense { color: var(--accent-red); font-weight: 700; }
+
+        .action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-family: 'Cinzel', serif;
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin-right: 8px;
+            text-decoration: underline;
+        }
+
+        .edit-link { color: var(--gold-dark); }
+        .delete-link { color: var(--accent-red); }
+
+        .empty-registry {
+            text-align: center;
+            padding: 26px;
+            font-style: italic;
+            color: var(--ink-muted);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(2px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal-card {
+            background: var(--bg-parchment);
+            border: 3px solid var(--gold-burnished);
+            width: 100%;
+            max-width: 450px;
+            padding: 30px;
+            box-shadow: var(--shadow-deep), var(--shadow-gold);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            border-radius: 4px;
+        }
+
+        #toastContainer {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        .toast-message {
+            background: #fffdf9;
+            border: 1px solid var(--gold-dark);
+            border-left: 6px solid var(--gold-bright);
+            padding: 12px 20px;
+            font-size: 0.9rem;
+            font-family: 'Cinzel', serif;
+            font-weight: 700;
+            color: var(--ink-main);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+            animation: slideIn 0.3s ease-out;
+            border-radius: 2px;
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(60px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .ledger-footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--ink-muted);
+            border-top: 1px solid var(--gold-burnished);
+            padding-top: 16px;
+            font-family: 'Cinzel', serif;
+            letter-spacing: 0.8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ledger-container">
+        <svg class="corner-ornament corner-tl" viewBox="0 0 32 32">
+            <path d="M4 28V8C4 5.79 5.79 4 8 4H28M8 8H20M8 8V20" stroke="#c59325" stroke-width="2" stroke-linecap="round" fill="none"/>
+            <rect x="6" y="6" width="4" height="4" fill="#f3c244" transform="rotate(45 8 8)"/>
+        </svg>
+        <svg class="corner-ornament corner-tr" viewBox="0 0 32 32">
+            <path d="M28 28V8C28 5.79 26.21 4 24 4H4M24 8H12M24 8V20" stroke="#c59325" stroke-width="2" stroke-linecap="round" fill="none"/>
+            <rect x="22" y="6" width="4" height="4" fill="#f3c244" transform="rotate(45 24 8)"/>
+        </svg>
+
+        <header class="ledger-header">
+            <h1>The Ledger of Coin & Outflow</h1>
+            <div class="sub-header-quote">"A meticulous account of wages, provisions, and the sovereign balance."</div>
+            
+            <div class="flourish-divider">
+                <svg width="220" height="18" viewBox="0 0 220 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M0 9H85M135 9H220" stroke="#c59325" stroke-width="1.5" stroke-linecap="round"/>
+                    <path d="M110 2L116 9L110 16L104 9Z" fill="#f3c244" stroke="#c59325" stroke-width="1.2"/>
+                    <circle cx="92" cy="9" r="2.5" fill="#c59325"/>
+                    <circle cx="128" cy="9" r="2.5" fill="#c59325"/>
+                </svg>
+            </div>
+
+            <nav class="nav-ribbon">
+                <button type="button" class="vintage-btn active" id="navHomeBtn">Archive Home</button>
+                <button type="button" class="vintage-btn" id="navDashBtn">The Vault Ledger</button>
+                <button type="button" class="vintage-btn" id="exportCsvBtn">Export CSV</button>
+                <button type="button" class="vintage-btn danger" id="clearAllBtn">Purge All Entries</button>
+            </nav>
+        </header>
+
+        <main id="homeScreen" class="screen active">
+            <div class="home-content">
+                <div class="home-banner">Private Victorian Bookkeeping Register</div>
+                <p class="home-text">
+                    "He that will not keep a ledger of his pennies shall soon wonder why his gold has taken wings."
+                    Maintain impeccable track of your trade earnings, apothecary items, domestic provisions, and remaining treasure securely within your browser vault.
+                </p>
+                
+                <div class="home-grid">
+                    <div class="home-box">
+                        <h4><span class="gold-diamond"></span>Intelligent Vault Classification</h4>
+                        <p>Our autonomous clerk inspects each entry and classifies your copper and silver into fitting historical categories automatically.</p>
+                    </div>
+                    <div class="home-box">
+                        <h4><span class="gold-diamond"></span>The Victorian AI Auditor</h4>
+                        <p>Receive sharp, witty audits from the Victorian Comptroller regarding your thrift, extravagance, and treasury health.</p>
+                    </div>
+                    <div class="home-box">
+                        <h4><span class="gold-diamond"></span>Luminous Chronicles</h4>
+                        <p>Vibrant categorical charts display precisely where your silver travels across every season.</p>
+                    </div>
+                </div>
+
+                <button type="button" class="quill-btn" id="enterDashBtn" style="padding: 14px 38px; font-size: 1rem; margin-top: 10px;">Open the Ledger Book</button>
+            </div>
+        </main>
+
+        <main id="dashboardScreen" class="screen">
+            <section class="metrics-grid">
+                <div class="metric-card income">
+                    <div class="metric-title">Treasury Inflows</div>
+                    <div class="metric-amount" id="totalIncome">$0.00</div>
+                </div>
+                <div class="metric-card expense">
+                    <div class="metric-title">Register of Expenses</div>
+                    <div class="metric-amount" id="totalExpense">$0.00</div>
+                </div>
+                <div class="metric-card balance">
+                    <div class="metric-title">Net Vault Balance</div>
+                    <div class="metric-amount" id="totalBalance">$0.00</div>
+                </div>
+            </section>
+
+            <section class="ai-audit-panel">
+                <div class="ai-audit-header">
+                    <div class="ai-audit-title">
+                        <span class="gold-diamond"></span>
+                        The Victorian Comptroller AI Audit
+                    </div>
+                    <div class="ai-header-controls">
+                        <button type="button" class="re-audit-btn" id="reAuditBtn">Consult Comptroller</button>
+                        <div class="ai-verdict-badge" id="aiVerdictBadge">Status: Awaiting First Record</div>
+                    </div>
+                </div>
+                <div class="ai-commentary-text" id="aiCommentaryText">
+                    The ledger remains unwritten. Provide your transactions of copper and silver, and the Comptroller shall render verdict upon your fiscal discipline.
+                </div>
+            </section>
+
+            <section class="workspace-grid">
+                <div class="ledger-panel">
+                    <div class="panel-title">Inscribe New Entry</div>
+                    <form id="entryForm">
+                        <div class="form-row">
+                            <label>Transaction Nature</label>
+                            <div class="type-selector">
+                                <button type="button" class="type-tab active" id="tabIncome">Coin Earned</button>
+                                <button type="button" class="type-tab" id="tabExpense">Coin Spent</button>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <label for="entryDesc">Particulars / Description <span style="font-weight: normal; font-size: 0.7rem; text-transform: none;">(Optional)</span></label>
+                            <input type="text" id="entryDesc" class="parchment-input" placeholder="e.g. Baker Flour, Master Joiner Wages, Tonic">
+                            <div class="ai-preview-tag" id="aiCategoryPreview">AI Category: General Inflow</div>
+                        </div>
+
+                        <div class="form-row">
+                            <label for="entryAmount">Sum ($)</label>
+                            <input type="number" id="entryAmount" step="0.01" min="0.01" class="parchment-input" placeholder="0.00" required>
+                        </div>
+
+                        <div class="form-row">
+                            <label for="entryDate">Entry Date</label>
+                            <input type="date" id="entryDate" class="parchment-input" required>
+                        </div>
+
+                        <button type="submit" class="quill-btn">Record in Vault</button>
+                    </form>
+                </div>
+
+                <div class="ledger-panel">
+                    <div class="panel-title">Distribution of Outflows</div>
+                    <div class="chart-box">
+                        <canvas id="expenseChart"></canvas>
+                        <div id="expenseEmptyNotice" class="no-data-notice" style="display:none;">No expenditures recorded to illustrate.</div>
+                    </div>
+                </div>
+
+                <div class="ledger-panel">
+                    <div class="panel-title">Treasury Flow Comparison</div>
+                    <div class="chart-box">
+                        <canvas id="cashflowChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <section class="registry-panel">
+                <div class="panel-title" style="margin-bottom: 12px;">
+                    <span>Chronicles of Transactions</span>
+                    <span id="recordCount" style="font-size: 0.85rem; font-weight: normal; color: var(--ink-muted);">0 records</span>
+                </div>
+                
+                <div class="registry-controls">
+                    <div class="filters-group">
+                        <input type="text" id="searchFilter" class="parchment-input" placeholder="Search particulars or category..." style="padding: 7px 12px; font-size: 0.88rem; width: 220px;">
+                        <select id="filterType" class="parchment-input" style="padding: 7px 12px; font-size: 0.88rem;">
+                            <option value="all">All Chronicles</option>
+                            <option value="income">Earnings Only (+)</option>
+                            <option value="expense">Expenses Only (-)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="registry-table-wrap">
+                    <table class="registry-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Particulars</th>
+                                <th>AI Category</th>
+                                <th>Sum</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="registryBody">
+                            <tr>
+                                <td colspan="5" class="empty-registry">No entries have been inscribed into the ledger yet.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+
+        <footer class="ledger-footer">
+            <span>Preserved Locally in Private Vault</span>
+            <span>Made by Kaisen Devs</span>
+        </footer>
+    </div>
+
+    <div class="modal-overlay" id="editModal">
+        <div class="modal-card">
+            <div class="panel-title">Amend Ledger Record</div>
+            <form id="editForm">
+                <input type="hidden" id="editId">
+                <div class="form-row">
+                    <label for="editDesc">Particulars <span style="font-weight: normal; font-size: 0.7rem; text-transform: none;">(Optional)</span></label>
+                    <input type="text" id="editDesc" class="parchment-input" placeholder="Particulars">
+                    <div class="ai-preview-tag" id="editAiCategoryPreview">AI Category: General Outflow</div>
+                </div>
+                <div class="form-row">
+                    <label for="editAmount">Sum ($)</label>
+                    <input type="number" id="editAmount" step="0.01" min="0.01" class="parchment-input" required>
+                </div>
+                <div class="form-row">
+                    <label for="editDate">Date</label>
+                    <input type="date" id="editDate" class="parchment-input" required>
+                </div>
+                <div style="display: flex; gap: 12px; margin-top: 10px;">
+                    <button type="submit" class="quill-btn" style="flex: 1;">Save Changes</button>
+                    <button type="button" class="vintage-btn" id="cancelEditBtn" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal-card" style="max-width: 380px; text-align: center;">
+            <div class="panel-title" style="justify-content: center;">Purge Ledger Archives</div>
+            <p style="font-size: 0.95rem; color: var(--ink-muted); line-height: 1.6;">
+                This action will wipe every single inscribed record from your vault. Confirm execution below.
+            </p>
+            <div style="display: flex; gap: 12px; margin-top: 10px;">
+                <button type="button" class="vintage-btn danger" id="confirmPurgeBtn" style="flex: 1;">Purge All</button>
+                <button type="button" class="vintage-btn" id="cancelPurgeBtn" style="flex: 1;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer"></div>
+
+    <script>
+        const STORAGE_KEY = 'vintage_ledger_records_v11';
+        let registryData = [];
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) registryData = JSON.parse(raw);
+        } catch (e) {
+            registryData = [];
+        }
+        let currentType = 'income';
+
+        function determineAICategory(text, type) {
+            const raw = (text || '').toLowerCase().trim();
+
+            if (type === 'income') {
+                if (/wage|salary|labor|carpenter|joiner|smith|mason|clerk|overtime|work|job|pay|craft/i.test(raw)) {
+                    return 'Labor & Wages';
+                }
+                if (/dividend|stock|share|interest|bond|railway|investment|vault|fund/i.test(raw)) {
+                    return 'Investments & Dividends';
+                }
+                if (/rent|tenant|estate|property|lease|lodger/i.test(raw)) {
+                    return 'Property & Rents';
+                }
+                if (/sale|merchant|trade|commerce|wares|goods|market/i.test(raw)) {
+                    return 'Trade & Commerce';
+                }
+                return 'General Inflow';
+            } else {
+                if (/food|provision|bread|flour|tea|coffee|meat|butcher|grocer|ale|wine|feast|supper|dinner|milk|lard|sugar/i.test(raw)) {
+                    return 'Provisions & Sustenance';
+                }
+                if (/rent|lodging|hearth|coal|wood|firewood|candle|oil|lamp|chimney|roof|house/i.test(raw)) {
+                    return 'Lodging & Hearth';
+                }
+                if (/coat|tailor|apparel|boots|cobbler|shoe|dress|hat|silk|linen|wool|trousers|fabric/i.test(raw)) {
+                    return 'Apparel & Tailoring';
+                }
+                if (/apothecary|tonic|medicine|elixir|physician|doctor|liniment|pill|health|chemist/i.test(raw)) {
+                    return 'Apothecary & Health';
+                }
+                if (/coach|carriage|horse|cab|fare|train|railway|fare|travel|ticket|steamer|journey/i.test(raw)) {
+                    return 'Coach & Transport';
+                }
+                if (/theatre|opera|cigar|tobacco|pipe|gambling|whist|novel|spirit|whiskey|luxury|jewel/i.test(raw)) {
+                    return 'Leisure & Luxuries';
+                }
+                return 'General Outflow';
+            }
+        }
+
+        function pickRandom(arr) {
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
+        function generateAICommentary(data) {
+            const verdictEl = document.getElementById('aiVerdictBadge');
+            const commentEl = document.getElementById('aiCommentaryText');
+            if (!verdictEl || !commentEl) return;
+
+            if (!data || data.length === 0) {
+                const emptyDialogues = [
+                    'The ledger remains blank and silent. Inscribe your coin and provisions so the Comptroller may render swift audit.',
+                    'Not a single copper recorded in the vault. Dip your quill in ink and present your accounts for inspection.',
+                    'A quiet ledger is the luxury of monarchs or vagabonds. Disclose your silver flow to initiate the counting house audit.',
+                    'The inkwell sits ready while your vault remains unchronicled. Record your daily wages and outflows for review.'
+                ];
+                verdictEl.textContent = 'Status: Awaiting First Record';
+                commentEl.textContent = pickRandom(emptyDialogues);
+                return;
+            }
+
+            const totalInc = data.filter(r => r.type === 'income').reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+            const totalExp = data.filter(r => r.type === 'expense').reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+            const netBal = totalInc - totalExp;
+
+            const expenseMap = {};
+            data.filter(r => r.type === 'expense').forEach(e => {
+                expenseMap[e.category] = (expenseMap[e.category] || 0) + (Number(e.amount) || 0);
+            });
+
+            let topExpenseCat = '';
+            let maxExpenseVal = 0;
+            for (const cat in expenseMap) {
+                if (expenseMap[cat] > maxExpenseVal) {
+                    maxExpenseVal = expenseMap[cat];
+                    topExpenseCat = cat;
+                }
+            }
+
+            if (totalInc === 0 && totalExp > 0) {
+                const zeroIncomeDialogues = [
+                    `By the Crown, you have disbursed $${totalExp.toFixed(2)} in silver without a single copper of wage inscribed. Even wealthy lords cannot live on thin air and goodwill.`,
+                    `You disburse coin like a reckless aristocrat while recording zero incoming revenue. The workhouse awaits such careless domestic stewardship.`,
+                    `Outflows of $${totalExp.toFixed(2)} and not one shilling earned. Seek honest trade or apprenticeship before the bailiffs knock upon your door.`
+                ];
+                verdictEl.textContent = pickRandom(['Status: Perilous Outflow', 'Status: Unfunded Spender', 'Status: Bleeding Coffers']);
+                commentEl.textContent = pickRandom(zeroIncomeDialogues);
+                return;
+            }
+
+            if (netBal < 0) {
+                const deficitVal = Math.abs(netBal).toFixed(2);
+                const deficitDialogues = [
+                    `A grievous domestic deficit. Your expenses exceed earnings by $${deficitVal}. Tighten your purse strings before your creditors demand your silver spoons.`,
+                    `Your balance sinks into negative territory by $${deficitVal}. One does not maintain standing in polite society by outspending one station.`,
+                    `A deficit of $${deficitVal} is a direct carriage ride toward financial ruin. Cease non-essential disbursements on ${topExpenseCat || 'frivolities'} immediately.`,
+                    `Disaster looms over your household accounts with $${deficitVal} in deficit. Severe domestic austerity is now firmly commanded.`
+                ];
+                verdictEl.textContent = pickRandom(['Status: Hazardous Deficit', 'Status: Overdrawn Estate', 'Status: Solvent Crisis']);
+                commentEl.textContent = pickRandom(deficitDialogues);
+                return;
+            }
+
+            const savingsRatio = totalInc > 0 ? (netBal / totalInc) : 0;
+            const pct = (savingsRatio * 100).toFixed(0);
+
+            if (savingsRatio >= 0.60) {
+                const highSavingsDialogues = [
+                    `A masterclass in Victorian thrift. You have preserved ${pct} percent of your gold. The Bank of England itself would commend such steadfast fortitude.`,
+                    `A counting-house masterwork. With ${pct} percent of wages retained, your estate stands firmly fortified against any financial panic.`,
+                    `Splendid restraint and sovereign discipline. You hoard coin like a master banker preparing for industrial empire.`,
+                    `Few gentlemen in London possess such iron will over their purses. Your vault swells with ${pct} percent of all wages earned.`
+                ];
+                verdictEl.textContent = pickRandom(['Status: Master of Imperial Thrift', 'Status: Sovereign Capitalist', 'Status: Iron Banker']);
+                commentEl.textContent = pickRandom(highSavingsDialogues);
+                return;
+            }
+
+            if (savingsRatio >= 0.25) {
+                const categoryNotes = {
+                    'Leisure & Luxuries': 'Your taste for evening pleasures and tobacco takes notable coin, though your surplus holds.',
+                    'Provisions & Sustenance': 'The kitchen and provisioner claim significant silver, though your accounts remain sound.',
+                    'Lodging & Hearth': 'Heavier coal and domestic hearth dues than average, but your balance remains in good health.',
+                    'Apparel & Tailoring': 'Your tailor has received handsome sums, yet your treasury maintains respectable order.'
+                };
+
+                const specificNote = categoryNotes[topExpenseCat] || `Your funds move with disciplined cadence, retaining a comfortable $${netBal.toFixed(2)} reserve.`;
+                const moderateDialogues = [
+                    `A respectable showing for a prudent household. Your ledger retains ${pct} percent of earnings in steady reserve. ${specificNote}`,
+                    `Sound domestic economics. You maintain a solid cushion of $${netBal.toFixed(2)} while meeting all household obligations with dignity.`,
+                    `Your accounts demonstrate commendable Victorian balance. Continue this trajectory and your future shall remain secure.`
+                ];
+                verdictEl.textContent = pickRandom(['Status: Prudent Gentleman', 'Status: Disciplined Estate', 'Status: Sound Household']);
+                commentEl.textContent = pickRandom(moderateDialogues);
+                return;
+            }
+
+            const narrowDialogues = [
+                `You walk a razor-thin tightrope with barely ${pct} percent of your coin spared. A sudden coach breakdown or physician bill could plunge your vault into debt.`,
+                `Living within inches of your total income. Seek greater margin before the arrival of harsh winter expenditures.`,
+                `Your earnings and expenditures run neck and neck. A single unforeseen domestic mishap will thrust your ledger into deficit.`
+            ];
+            verdictEl.textContent = pickRandom(['Status: Narrow Margins', 'Status: Tightrope Accounts', 'Status: Fragile Equilibrium']);
+            commentEl.textContent = pickRandom(narrowDialogues);
+        }
+
+        const homeScreen = document.getElementById('homeScreen');
+        const dashboardScreen = document.getElementById('dashboardScreen');
+        const navHomeBtn = document.getElementById('navHomeBtn');
+        const navDashBtn = document.getElementById('navDashBtn');
+        const enterDashBtn = document.getElementById('enterDashBtn');
+
+        const tabIncome = document.getElementById('tabIncome');
+        const tabExpense = document.getElementById('tabExpense');
+        const entryDescInput = document.getElementById('entryDesc');
+        const entryDateInput = document.getElementById('entryDate');
+        const entryForm = document.getElementById('entryForm');
+        const aiCategoryPreview = document.getElementById('aiCategoryPreview');
+
+        const filterType = document.getElementById('filterType');
+        const searchFilter = document.getElementById('searchFilter');
+        const registryBody = document.getElementById('registryBody');
+
+        const editModal = document.getElementById('editModal');
+        const editForm = document.getElementById('editForm');
+        const editDescInput = document.getElementById('editDesc');
+        const editAiCategoryPreview = document.getElementById('editAiCategoryPreview');
+        const cancelEditBtn = document.getElementById('cancelEditBtn');
+
+        const confirmModal = document.getElementById('confirmModal');
+        const confirmPurgeBtn = document.getElementById('confirmPurgeBtn');
+        const cancelPurgeBtn = document.getElementById('cancelPurgeBtn');
+        const reAuditBtn = document.getElementById('reAuditBtn');
+
+        function updateAIPreview() {
+            if (aiCategoryPreview && entryDescInput) {
+                const detected = determineAICategory(entryDescInput.value, currentType);
+                aiCategoryPreview.textContent = `AI Category: ${detected}`;
+            }
+        }
+
+        if (entryDescInput) {
+            entryDescInput.addEventListener('input', updateAIPreview);
+        }
+
+        if (reAuditBtn) {
+            reAuditBtn.onclick = function() {
+                generateAICommentary(registryData);
+                showToast('The Comptroller has re-evaluated your accounts.');
+            };
+        }
+
+        function showToast(message) {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            const toast = document.createElement('div');
+            toast.className = 'toast-message';
+            toast.innerHTML = `<span class="gold-diamond"></span> ${escapeHTML(message)}`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.4s ease';
+                setTimeout(() => toast.remove(), 400);
+            }, 3000);
+        }
+
+        function escapeHTML(str) {
+            return String(str || '').replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+        }
+
+        function switchScreen(target) {
+            try {
+                if (target === 'home') {
+                    homeScreen.classList.add('active');
+                    dashboardScreen.classList.remove('active');
+                    navHomeBtn.classList.add('active');
+                    navDashBtn.classList.remove('active');
+                } else {
+                    homeScreen.classList.remove('active');
+                    dashboardScreen.classList.add('active');
+                    navDashBtn.classList.add('active');
+                    navHomeBtn.classList.remove('active');
+                    
+                    renderRegistry();
+                    initOrUpdateCharts();
+                }
+            } catch (err) {}
+        }
+
+        if (navHomeBtn) navHomeBtn.onclick = function() { switchScreen('home'); };
+        if (navDashBtn) navDashBtn.onclick = function() { switchScreen('dash'); };
+        if (enterDashBtn) enterDashBtn.onclick = function() { switchScreen('dash'); };
+
+        if (entryDateInput) {
+            entryDateInput.value = new Date().toISOString().split('T')[0];
+        }
+
+        if (tabIncome) {
+            tabIncome.onclick = function() {
+                currentType = 'income';
+                tabIncome.classList.add('active');
+                if (tabExpense) tabExpense.classList.remove('active');
+                updateAIPreview();
+            };
+        }
+
+        if (tabExpense) {
+            tabExpense.onclick = function() {
+                currentType = 'expense';
+                tabExpense.classList.add('active');
+                if (tabIncome) tabIncome.classList.remove('active');
+                updateAIPreview();
+            };
+        }
+
+        if (entryForm) {
+            entryForm.onsubmit = function(e) {
+                e.preventDefault();
+                const amountInput = document.getElementById('entryAmount');
+                const amountVal = parseFloat(amountInput ? amountInput.value : 0);
+                if (isNaN(amountVal) || amountVal <= 0) {
+                    showToast('Please specify a valid sum of coin.');
+                    return;
+                }
+
+                const rawDesc = entryDescInput ? entryDescInput.value.trim() : '';
+                const aiCategory = determineAICategory(rawDesc, currentType);
+
+                const newRecord = {
+                    id: Date.now(),
+                    desc: rawDesc || aiCategory,
+                    category: aiCategory,
+                    amount: amountVal,
+                    date: entryDateInput ? entryDateInput.value : new Date().toISOString().split('T')[0],
+                    type: currentType
+                };
+
+                registryData.unshift(newRecord);
+                saveAndRefresh();
+                entryForm.reset();
+                if (entryDateInput) entryDateInput.value = new Date().toISOString().split('T')[0];
+                updateAIPreview();
+                showToast(`Inscribed and categorized as ${aiCategory}.`);
+            };
+        }
+
+        let currentEditingRecord = null;
+
+        function openEditModal(id) {
+            const record = registryData.find(r => r.id === id);
+            if (!record) return;
+
+            currentEditingRecord = record;
+            document.getElementById('editId').value = record.id;
+            editDescInput.value = record.desc || '';
+            document.getElementById('editAmount').value = record.amount;
+            document.getElementById('editDate').value = record.date;
+            
+            const cat = determineAICategory(record.desc, record.type);
+            editAiCategoryPreview.textContent = `AI Category: ${cat}`;
+
+            editModal.classList.add('active');
+        }
+
+        if (editDescInput) {
+            editDescInput.oninput = function() {
+                if (currentEditingRecord) {
+                    const cat = determineAICategory(editDescInput.value, currentEditingRecord.type);
+                    editAiCategoryPreview.textContent = `AI Category: ${cat}`;
+                }
+            };
+        }
+
+        if (cancelEditBtn) {
+            cancelEditBtn.onclick = function() {
+                editModal.classList.remove('active');
+            };
+        }
+
+        if (editForm) {
+            editForm.onsubmit = function(e) {
+                e.preventDefault();
+                const id = parseInt(document.getElementById('editId').value, 10);
+                const recordIndex = registryData.findIndex(r => r.id === id);
+                
+                if (recordIndex !== -1) {
+                    const rec = registryData[recordIndex];
+                    const rawDesc = editDescInput.value.trim();
+                    const aiCategory = determineAICategory(rawDesc, rec.type);
+
+                    rec.desc = rawDesc || aiCategory;
+                    rec.category = aiCategory;
+                    rec.amount = parseFloat(document.getElementById('editAmount').value);
+                    rec.date = document.getElementById('editDate').value;
+                    
+                    saveAndRefresh();
+                    editModal.classList.remove('active');
+                    showToast('Record amendments saved.');
+                }
+            };
+        }
+
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        if (clearAllBtn) {
+            clearAllBtn.onclick = function() {
+                confirmModal.classList.add('active');
+            };
+        }
+
+        if (cancelPurgeBtn) {
+            cancelPurgeBtn.onclick = function() {
+                confirmModal.classList.remove('active');
+            };
+        }
+
+        if (confirmPurgeBtn) {
+            confirmPurgeBtn.onclick = function() {
+                registryData = [];
+                saveAndRefresh();
+                confirmModal.classList.remove('active');
+                showToast('Ledger completely purged.');
+            };
+        }
+
+        const exportCsvBtn = document.getElementById('exportCsvBtn');
+        if (exportCsvBtn) {
+            exportCsvBtn.onclick = function() {
+                if (!registryData || registryData.length === 0) {
+                    showToast('No records available to export.');
+                    return;
+                }
+                let csv = 'ID,Type,Particulars,AI_Category,Date,Amount\n';
+                registryData.forEach(r => {
+                    csv += `${r.id},${r.type},"${(r.desc || '').replace(/"/g, '""')}","${r.category}",${r.date},${r.amount}\n`;
+                });
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `ledger_records_${new Date().toISOString().slice(0,10)}.csv`;
+                link.click();
+                showToast('CSV ledger exported.');
+            };
+        }
+
+        if (registryBody) {
+            registryBody.onclick = function(e) {
+                const editBtn = e.target.closest('.edit-link');
+                const deleteBtn = e.target.closest('.delete-link');
+
+                if (editBtn) {
+                    const id = parseInt(editBtn.dataset.id, 10);
+                    openEditModal(id);
+                } else if (deleteBtn) {
+                    const id = parseInt(deleteBtn.dataset.id, 10);
+                    registryData = registryData.filter(r => r.id !== id);
+                    saveAndRefresh();
+                    showToast('Entry stricken from the registry.');
+                }
+            };
+        }
+
+        let expenseChartInst = null;
+        let cashflowChartInst = null;
+
+        function initOrUpdateCharts() {
+            if (typeof Chart === 'undefined') return;
+
+            try {
+                const chartFont = { family: "'Playfair Display', Georgia, serif", size: 12 };
+                const expenses = registryData.filter(r => r.type === 'expense');
+                const catMap = {};
+                expenses.forEach(e => { catMap[e.category] = (catMap[e.category] || 0) + Number(e.amount); });
+
+                const canvasExp = document.getElementById('expenseChart');
+                const noticeExp = document.getElementById('expenseEmptyNotice');
+
+                if (expenses.length === 0) {
+                    if (noticeExp) noticeExp.style.display = 'block';
+                } else {
+                    if (noticeExp) noticeExp.style.display = 'none';
+                }
+
+                const labels = Object.keys(catMap);
+                const dataValues = Object.values(catMap);
+                const vibrantColors = ['#c92a2a', '#087f5b', '#d97706', '#7950f2', '#1c7ed6', '#e8590c', '#20c997'];
+
+                if (!expenseChartInst && canvasExp) {
+                    const ctxExp = canvasExp.getContext('2d');
+                    expenseChartInst = new Chart(ctxExp, {
+                        type: 'doughnut',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: dataValues,
+                                backgroundColor: labels.map((_, i) => vibrantColors[i % vibrantColors.length]),
+                                borderWidth: 2,
+                                borderColor: '#fdf6e7'
+                            }]
+                        },
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false, 
+                            plugins: { 
+                                legend: { display: false },
+                                tooltip: {
+                                    titleFont: chartFont,
+                                    bodyFont: chartFont,
+                                    backgroundColor: '#1f1207',
+                                    borderColor: '#c59325',
+                                    borderWidth: 1,
+                                    callbacks: { label: (ctx) => ` $${Number(ctx.raw).toFixed(2)}` }
+                                }
+                            }, 
+                            cutout: '62%' 
+                        }
+                    });
+                } else if (expenseChartInst) {
+                    expenseChartInst.data.labels = labels;
+                    expenseChartInst.data.datasets[0].data = dataValues;
+                    expenseChartInst.data.datasets[0].backgroundColor = labels.map((_, i) => vibrantColors[i % vibrantColors.length]);
+                    expenseChartInst.update();
+                }
+
+                const totalInc = registryData.filter(r => r.type === 'income').reduce((sum, r) => sum + Number(r.amount), 0);
+                const totalExp = registryData.filter(r => r.type === 'expense').reduce((sum, r) => sum + Number(r.amount), 0);
+                const canvasCash = document.getElementById('cashflowChart');
+
+                if (!cashflowChartInst && canvasCash) {
+                    const ctxCash = canvasCash.getContext('2d');
+                    cashflowChartInst = new Chart(ctxCash, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Treasury Flow'],
+                            datasets: [
+                                { label: 'Inflows', data: [totalInc], backgroundColor: '#087f5b', borderRadius: 3 },
+                                { label: 'Outflows', data: [totalExp], backgroundColor: '#c92a2a', borderRadius: 3 }
+                            ]
+                        },
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false, 
+                            plugins: { 
+                                legend: { display: false },
+                                tooltip: {
+                                    titleFont: chartFont,
+                                    bodyFont: chartFont,
+                                    backgroundColor: '#1f1207',
+                                    borderColor: '#c59325',
+                                    borderWidth: 1,
+                                    callbacks: { label: (ctx) => ` ${ctx.dataset.label}: $${Number(ctx.raw).toFixed(2)}` }
+                                }
+                            }, 
+                            scales: { 
+                                x: { grid: { display: false } }, 
+                                y: { grid: { color: 'rgba(197, 147, 37, 0.2)' }, ticks: { font: chartFont } } 
+                            } 
+                        }
+                    });
+                } else if (cashflowChartInst) {
+                    cashflowChartInst.data.datasets[0].data = [totalInc];
+                    cashflowChartInst.data.datasets[1].data = [totalExp];
+                    cashflowChartInst.update();
+                }
+            } catch (err) {}
+        }
+
+        function renderRegistry() {
+            try {
+                const totalInc = registryData.filter(r => r.type === 'income').reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+                const totalExp = registryData.filter(r => r.type === 'expense').reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+                const netBal = totalInc - totalExp;
+
+                const incEl = document.getElementById('totalIncome');
+                const expEl = document.getElementById('totalExpense');
+                const balEl = document.getElementById('totalBalance');
+
+                if (incEl) incEl.textContent = `$${totalInc.toFixed(2)}`;
+                if (expEl) expEl.textContent = `$${totalExp.toFixed(2)}`;
+                if (balEl) {
+                    let minusPrefix = '';
+                    if (netBal < 0) {
+                        minusPrefix = '-';
+                        balEl.style.color = 'var(--accent-red)';
+                    } else {
+                        balEl.style.color = 'var(--ink-main)';
+                    }
+                    balEl.textContent = `${minusPrefix}$${Math.abs(netBal).toFixed(2)}`;
+                }
+
+                generateAICommentary(registryData);
+
+                let searchKeyword = '';
+                if (searchFilter) searchKeyword = searchFilter.value.toLowerCase().trim();
+                
+                let filterTypeVal = 'all';
+                if (filterType) filterTypeVal = filterType.value;
+
+                let filtered = registryData.filter(r => {
+                    const matchesType = (filterTypeVal === 'all' || r.type === filterTypeVal);
+                    const descText = (r.desc || '').toLowerCase();
+                    const catText = (r.category || '').toLowerCase();
+                    const matchesSearch = !searchKeyword || descText.includes(searchKeyword) || catText.includes(searchKeyword);
+                    return matchesType && matchesSearch;
+                });
+
+                const countEl = document.getElementById('recordCount');
+                if (countEl) countEl.textContent = `${filtered.length} of ${registryData.length} records shown`;
+                
+                if (registryBody) {
+                    registryBody.innerHTML = '';
+                    if (filtered.length === 0) {
+                        registryBody.innerHTML = `<tr><td colspan="5" class="empty-registry">No matching transactions inscribed in this view.</td></tr>`;
+                    } else {
+                        filtered.forEach(r => {
+                            const tr = document.createElement('tr');
+                            let sign = '-';
+                            if (r.type === 'income') {
+                                sign = '+';
+                            }
+                            tr.innerHTML = `
+                                <td style="white-space: nowrap;">${escapeHTML(r.date)}</td>
+                                <td><strong>${escapeHTML(r.desc)}</strong></td>
+                                <td><span class="category-badge">${escapeHTML(r.category)}</span></td>
+                                <td class="amount-col ${r.type}">${sign}$${Math.abs(Number(r.amount) || 0).toFixed(2)}</td>
+                                <td style="white-space: nowrap;">
+                                    <button type="button" class="action-btn edit-link" data-id="${r.id}">Amend</button>
+                                    <button type="button" class="action-btn delete-link" data-id="${r.id}">Strike Out</button>
+                                </td>
+                            `;
+                            registryBody.appendChild(tr);
+                        });
+                    }
+                }
+            } catch (err) {}
+        }
+
+        function saveAndRefresh() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(registryData));
+            } catch (e) {}
+            renderRegistry();
+            initOrUpdateCharts();
+        }
+
+        if (filterType) filterType.onchange = renderRegistry;
+        if (searchFilter) searchFilter.oninput = renderRegistry;
+
+        updateAIPreview();
+        renderRegistry();
+    </script>
+</body>
+</html>
