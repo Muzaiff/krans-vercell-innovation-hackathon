@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Ledger of Coin and Expense | 1880s Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-parchment: #f4ebd0;
+            --bg-parchment-dark: #e3d3b3;
+            --ink-main: #2b1d0c;
+            --ink-muted: #5c4033;
+            --sepia-border: #8c6d53;
+            --sepia-border-dark: #594131;
+            --accent-red: #8b0000;
+            --accent-green: #1b4d3e;
+            --card-bg: rgba(244, 235, 208, 0.85);
+            --shadow: 0 10px 30px rgba(43, 29, 12, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Playfair Display', serif;
+            color: var(--ink-main);
+        }
+
+        body {
+            background-color: #2b1d0c;
+            background-image: radial-gradient(circle, #3d2812 0%, #1a1107 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 20px;
+        }
+
+        .ledger-container {
+            width: 100%;
+            max-width: 1200px;
+            background: var(--bg-parchment);
+            background-image: linear-gradient(to right, rgba(140, 109, 83, 0.05) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(140, 109, 83, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            border: 4px double var(--sepia-border-dark);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 0 80px rgba(140, 109, 83, 0.2);
+            border-radius: 4px;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            position: relative;
+        }
+
+        .screen {
+            display: none;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+
+        .screen.active {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .ledger-header {
+            text-align: center;
+            border-bottom: 2px solid var(--sepia-border);
+            padding-bottom: 25px;
+            position: relative;
+        }
+
+        .ledger-header h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 2.8rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+            color: var(--ink-main);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .nav-ribbon {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .vintage-btn {
+            background: var(--bg-parchment-dark);
+            border: 1px solid var(--sepia-border);
+            padding: 6px 18px;
+            font-family: 'Cinzel', serif;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: inset 0 1px 3px rgba(255,255,255,0.4);
+            border-radius: 2px;
+        }
+
+        .vintage-btn:hover, .vintage-btn.active {
+            background: var(--ink-main);
+            color: var(--bg-parchment);
+            border-color: var(--ink-main);
+        }
+
+        .home-content {
+            text-align: center;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 25px;
+        }
+
+        .home-banner {
+            font-family: 'Cinzel', serif;
+            font-size: 0.9rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--accent-red);
+            border-top: 1px solid var(--sepia-border);
+            border-bottom: 1px solid var(--sepia-border);
+            padding: 8px 24px;
+        }
+
+        .home-text {
+            max-width: 700px;
+            font-size: 1.2rem;
+            line-height: 1.8;
+            color: var(--ink-muted);
+            font-style: italic;
+        }
+
+        .home-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            width: 100%;
+            margin-top: 10px;
+            text-align: left;
+        }
+
+        .home-box {
+            background: var(--card-bg);
+            border: 1px solid var(--sepia-border);
+            padding: 24px;
+            border-top: 4px solid var(--sepia-border-dark);
+        }
+
+        .home-box h4 {
+            font-family: 'Cinzel', serif;
+            font-size: 1rem;
+            margin-bottom: 8px;
+            color: var(--ink-main);
+        }
+
+        .home-box p {
+            font-size: 0.95rem;
+            color: var(--ink-muted);
+            line-height: 1.5;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        @media(max-width: 800px) {
+            .metrics-grid { grid-template-columns: 1fr; }
+        }
+
+        .metric-card {
+            background: var(--card-bg);
+            border: 1px solid var(--sepia-border);
+            padding: 20px;
+            text-align: center;
+            box-shadow: 2px 2px 10px rgba(43,29,12,0.1);
+            position: relative;
+        }
+
+        .metric-card::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 3px;
+            background: var(--sepia-border);
+        }
+
+        .metric-title {
+            font-family: 'Cinzel', serif;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--ink-muted);
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .metric-amount {
+            font-family: 'Cinzel', serif;
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .metric-card.income .metric-amount { color: var(--accent-green); }
+        .metric-card.expense .metric-amount { color: var(--accent-red); }
+        .metric-card.balance .metric-amount { color: var(--ink-main); }
+
+        .workspace-grid {
+            display: grid;
+            grid-template-columns: 350px 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media(max-width: 1050px) {
+            .workspace-grid { grid-template-columns: 1fr; }
+        }
+
+        .ledger-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--sepia-border);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            box-shadow: 2px 2px 10px rgba(43,29,12,0.1);
+        }
+
+        .panel-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            border-bottom: 1px solid var(--sepia-border);
+            padding-bottom: 8px;
+            letter-spacing: 1px;
+        }
+
+        .form-row {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-row label {
+            font-family: 'Cinzel', serif;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--ink-muted);
+        }
+
+        .parchment-input {
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid var(--sepia-border);
+            padding: 10px;
+            font-size: 0.95rem;
+            font-family: 'Playfair Display', serif;
+            color: var(--ink-main);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .parchment-input:focus {
+            border-color: var(--ink-main);
+            background: #fff;
+        }
+
+        .type-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+        }
+
+        .type-tab {
+            background: var(--bg-parchment-dark);
+            border: 1px solid var(--sepia-border);
+            padding: 8px;
+            text-align: center;
+            font-family: 'Cinzel', serif;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .type-tab.active {
+            background: var(--ink-main);
+            color: var(--bg-parchment);
+        }
+
+        .quill-btn {
+            background: var(--ink-main);
+            color: var(--bg-parchment);
+            border: 1px solid var(--ink-main);
+            padding: 12px;
+            font-family: 'Cinzel', serif;
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            cursor: pointer;
+            margin-top: 10px;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .quill-btn:hover {
+            background: var(--ink-muted);
+        }
+
+        .chart-box {
+            position: relative;
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 220px;
+        }
+
+        .registry-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--sepia-border);
+            padding: 24px;
+            box-shadow: 2px 2px 10px rgba(43,29,12,0.1);
+        }
+
+        .registry-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .registry-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.95rem;
+        }
+
+        .registry-table th {
+            font-family: 'Cinzel', serif;
+            font-size: 0.8rem;
+            border-bottom: 2px solid var(--sepia-border);
+            padding: 10px;
+            color: var(--ink-muted);
+            letter-spacing: 0.5px;
+        }
+
+        .registry-table td {
+            padding: 10px;
+            border-bottom: 1px dashed var(--sepia-border);
+        }
+
+        .registry-table tr:hover {
+            background: rgba(140, 109, 83, 0.08);
+        }
+
+        .amount-col.income { color: var(--accent-green); font-weight: 700; }
+        .amount-col.expense { color: var(--accent-red); font-weight: 700; }
+
+        .delete-link {
+            background: none;
+            border: none;
+            color: var(--accent-red);
+            cursor: pointer;
+            font-family: 'Cinzel', serif;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-decoration: underline;
+        }
+
+        .empty-registry {
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+            color: var(--ink-muted);
+        }
+
+        .ledger-footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--ink-muted);
+            border-top: 1px solid var(--sepia-border);
+            padding-top: 15px;
+            font-family: 'Cinzel', serif;
+            letter-spacing: 1px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ledger-container">
+        <header class="ledger-header">
+            <h1>The Ledger of Coin & Outflow</h1>
+            <div class="nav-ribbon">
+                <button class="vintage-btn active" id="navHomeBtn">Home Archive</button>
+                <button class="vintage-btn" id="navDashBtn">The Vault Ledger</button>
+                <button class="vintage-btn" id="clearAllBtn">Purge All Entries</button>
+            </div>
+        </header>
+
+        <div id="homeScreen" class="screen active">
+            <div class="home-content">
+                <div class="home-banner">Welcome to Your Personal Financial Register</div>
+                <p class="home-text">"A man who takes account of his copper and gold shall never find his pockets bare by surprise." Maintain meticulous track of your weekly wages, daily provisions, and remaining coinage securely stored within your browser's local vault.</p>
+                
+                <div class="home-grid">
+                    <div class="home-box">
+                        <h4>Absolute Privacy</h4>
+                        <p>All records remain entirely upon your personal apparatus. No telegraph wires or distant ledgers record your private business.</p>
+                    </div>
+                    <div class="home-box">
+                        <h4>Wages & Provisions</h4>
+                        <p>Record every incoming coin from your trade and every cent spent upon food, lodging, and apothecary needs.</p>
+                    </div>
+                    <div class="home-box">
+                        <h4>Visual Chronicles</h4>
+                        <p>Inspect colorful multi-segment charts detailing precisely where your silver travels each month.</p>
+                    </div>
+                </div>
+
+                <button class="quill-btn" id="enterDashBtn" style="padding: 14px 35px; font-size: 1rem; margin-top: 15px;">Open the Main Ledger</button>
+            </div>
+        </div>
+
+        <div id="dashboardScreen" class="screen">
+            <div class="metrics-grid">
+                <div class="metric-card income">
+                    <div class="metric-title">Vault of Earnings</div>
+                    <div class="metric-amount" id="totalIncome">$0.00</div>
+                </div>
+                <div class="metric-card expense">
+                    <div class="metric-title">Register of Expenses</div>
+                    <div class="metric-amount" id="totalExpense">$0.00</div>
+                </div>
+                <div class="metric-card balance">
+                    <div class="metric-title">Remaining Balance</div>
+                    <div class="metric-amount" id="totalBalance">$0.00</div>
+                </div>
+            </div>
+
+            <div class="workspace-grid">
+                <div class="ledger-panel">
+                    <div class="panel-title">Inscribe New Entry</div>
+                    <form id="entryForm">
+                        <div class="form-row" style="margin-bottom: 12px;">
+                            <div class="type-selector">
+                                <button type="button" class="type-tab active" id="tabIncome">Coin Earned</button>
+                                <button type="button" class="type-tab" id="tabExpense">Coin Spent</button>
+                            </div>
+                        </div>
+
+                        <div class="form-row" style="margin-bottom: 12px;">
+                            <label for="entryDesc">Title / Particulars</label>
+                            <input type="text" id="entryDesc" class="parchment-input" placeholder="e.g., Weekly Wages, Provisioner" required>
+                        </div>
+
+                        <div class="form-row" style="margin-bottom: 12px;">
+                            <label for="entryAmount">Sum ($)</label>
+                            <input type="number" id="entryAmount" step="0.01" class="parchment-input" placeholder="0.00" required>
+                        </div>
+
+                        <div class="form-row" style="margin-bottom: 12px;">
+                            <label for="entryDate">Date</label>
+                            <input type="date" id="entryDate" class="parchment-input" required>
+                        </div>
+
+                        <div class="form-row" style="margin-bottom: 15px;">
+                            <label for="entryCategory">Category</label>
+                            <select id="entryCategory" class="parchment-input">
+                                <option value="Labor & Wages">Labor & Wages</option>
+                                <option value="Investments">Investments</option>
+                                <option value="General Income">General Income</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="quill-btn">Record in Ledger</button>
+                    </form>
+                </div>
+
+                <div class="ledger-panel">
+                    <div class="panel-title">Distribution of Outflows</div>
+                    <div class="chart-box">
+                        <div style="width: 200px; height: 200px; position: relative;">
+                            <canvas id="expenseChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ledger-panel">
+                    <div class="panel-title">Treasury Flow Comparison</div>
+                    <div class="chart-box">
+                        <div style="width: 100%; height: 200px; position: relative;">
+                            <canvas id="cashflowChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="registry-panel">
+                <div class="panel-title" style="margin-bottom: 15px;">Chronicles of Transactions</div>
+                <div class="registry-controls">
+                    <select id="filterType" class="parchment-input" style="padding: 6px 12px; font-size: 0.85rem;">
+                        <option value="all">All Chronicles</option>
+                        <option value="income">Earnings Only</option>
+                        <option value="expense">Expenses Only</option>
+                    </select>
+                </div>
+                <div style="max-height: 250px; overflow-y: auto;">
+                    <table class="registry-table">
+                        <thead>
+                            <tr>
+                                <th>Particulars</th>
+                                <th>Category</th>
+                                <th>Date</th>
+                                <th>Sum</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="registryBody">
+                            <tr>
+                                <td colspan="5" class="empty-registry">No entries have been inscribed upon the ledger yet.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <footer class="ledger-footer">
+            <span>Preserved Locally Within Your Apparatus</span>
+            <span>Made by Kaisen Devs</span>
+        </footer>
+    </div>
+
+    <script>
+        let registryData = JSON.parse(localStorage.getItem('vintage_ledger_records')) || [];
+        let currentType = 'income';
+
+        const homeScreen = document.getElementById('homeScreen');
+        const dashboardScreen = document.getElementById('dashboardScreen');
+        const navHomeBtn = document.getElementById('navHomeBtn');
+        const navDashBtn = document.getElementById('navDashBtn');
+        const enterDashBtn = document.getElementById('enterDashBtn');
+
+        function switchScreen(target) {
+            if (target === 'home') {
+                homeScreen.classList.add('active');
+                dashboardScreen.classList.remove('active');
+                navHomeBtn.classList.add('active');
+                navDashBtn.classList.remove('active');
+            } else {
+                homeScreen.classList.remove('active');
+                dashboardScreen.classList.add('active');
+                navDashBtn.classList.add('active');
+                navHomeBtn.classList.remove('active');
+                updateCharts();
+            }
+        }
+
+        navHomeBtn.addEventListener('click', () => switchScreen('home'));
+        navDashBtn.addEventListener('click', () => switchScreen('dash'));
+        enterDashBtn.addEventListener('click', () => switchScreen('dash'));
+
+        const tabIncome = document.getElementById('tabIncome');
+        const tabExpense = document.getElementById('tabExpense');
+        const entryCategory = document.getElementById('entryCategory');
+        const entryDateInput = document.getElementById('entryDate');
+
+        const incomeCategories = ['Labor & Wages', 'Investments', 'General Income'];
+        const expenseCategories = ['Provisions & Food', 'Lodging & Rent', 'Apparel & Goods', 'Medicinals', 'Transport', 'General Expense'];
+
+        entryDateInput.value = new Date().toISOString().split('T')[0];
+
+        function populateCategories(type) {
+            entryCategory.innerHTML = '';
+            const cats = type === 'income' ? incomeCategories : expenseCategories;
+            cats.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                entryCategory.appendChild(opt);
+            });
+        }
+
+        tabIncome.addEventListener('click', () => {
+            currentType = 'income';
+            tabIncome.classList.add('active');
+            tabExpense.classList.remove('active');
+            populateCategories('income');
+        });
+
+        tabExpense.addEventListener('click', () => {
+            currentType = 'expense';
+            tabExpense.classList.add('active');
+            tabIncome.classList.remove('active');
+            populateCategories('expense');
+        });
+
+        const entryForm = document.getElementById('entryForm');
+        entryForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const newRecord = {
+                id: Date.now(),
+                desc: document.getElementById('entryDesc').value,
+                amount: parseFloat(document.getElementById('entryAmount').value),
+                date: entryDateInput.value,
+                type: currentType,
+                category: entryCategory.value
+            };
+            registryData.unshift(newRecord);
+            saveAndRefresh();
+            entryForm.reset();
+            entryDateInput.value = new Date().toISOString().split('T')[0];
+        });
+
+        window.deleteRecord = function(id) {
+            registryData = registryData.filter(r => r.id !== id);
+            saveAndRefresh();
+        };
+
+        document.getElementById('clearAllBtn').addEventListener('click', () => {
+            if(confirm('Are you certain you wish to wipe the entire ledger clean?')) {
+                registryData = [];
+                saveAndRefresh();
+            }
+        });
+
+        let expenseChartInst = null;
+        let cashflowChartInst = null;
+
+        function initCharts() {
+            const ctxExp = document.getElementById('expenseChart').getContext('2d');
+            expenseChartInst = new Chart(ctxExp, {
+                type: 'doughnut',
+                data: { 
+                    labels: [], 
+                    datasets: [{ 
+                        data: [], 
+                        borderWidth: 1, 
+                        borderColor: '#f4ebd0' 
+                    }] 
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '70%' }
+            });
+
+            const ctxCash = document.getElementById('cashflowChart').getContext('2d');
+            cashflowChartInst = new Chart(ctxCash, {
+                type: 'bar',
+                data: {
+                    labels: ['Treasury Flow'],
+                    datasets: [
+                        { label: 'Earnings', data: [0], backgroundColor: '#1b4d3e', borderRadius: 2 },
+                        { label: 'Expenses', data: [0], backgroundColor: '#8b0000', borderRadius: 2 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { color: 'rgba(140,109,83,0.1)' } } } }
+            });
+        }
+
+        function updateCharts() {
+            const expenses = registryData.filter(r => r.type === 'expense');
+            const catMap = {};
+            expenses.forEach(e => { catMap[e.category] = (catMap[e.category] || 0) + e.amount; });
+
+            if (expenseChartInst) {
+                const labels = Object.keys(catMap);
+                const dataValues = Object.values(catMap);
+                
+                const colorPalette = [
+                    '#8b0000', '#1b4d3e', '#b8860b', '#483d8b', '#d2691e', 
+                    '#2f4f4f', '#556b2f', '#8b4513', '#4682b4', '#6a5acd'
+                ];
+                
+                const assignedColors = labels.map((_, index) => colorPalette[index % colorPalette.length]);
+
+                expenseChartInst.data.labels = labels;
+                expenseChartInst.data.datasets[0].data = dataValues;
+                expenseChartInst.data.datasets[0].backgroundColor = assignedColors;
+                expenseChartInst.update();
+            }
+
+            const totalInc = registryData.filter(r => r.type === 'income').reduce((sum, r) => sum + r.amount, 0);
+            const totalExp = registryData.filter(r => r.type === 'expense').reduce((sum, r) => sum + r.amount, 0);
+
+            if (cashflowChartInst) {
+                cashflowChartInst.data.datasets[0].data = [totalInc];
+                cashflowChartInst.data.datasets[1].data = [totalExp];
+                cashflowChartInst.update();
+            }
+        }
+
+        function saveAndRefresh() {
+            localStorage.setItem('vintage_ledger_records', JSON.stringify(registryData));
+            renderRegistry();
+            updateCharts();
+        }
+
+        const filterType = document.getElementById('filterType');
+        filterType.addEventListener('change', renderRegistry);
+
+        function renderRegistry() {
+            const totalInc = registryData.filter(r => r.type === 'income').reduce((sum, r) => sum + r.amount, 0);
+            const totalExp = registryData.filter(r => r.type === 'expense').reduce((sum, r) => sum + r.amount, 0);
+            const netBal = totalInc - totalExp;
+
+            document.getElementById('totalIncome').textContent = `$${totalInc.toFixed(2)}`;
+            document.getElementById('totalExpense').textContent = `$${totalExp.toFixed(2)}`;
+            
+            const balEl = document.getElementById('totalBalance');
+            balEl.textContent = `${netBal < 0 ? '-' : ''}$${Math.abs(netBal).toFixed(2)}`;
+
+            let filtered = [...registryData];
+            const filterVal = filterType.value;
+            if (filterVal !== 'all') {
+                filtered = filtered.filter(r => r.type === filterVal);
+            }
+
+            const tbody = document.getElementById('registryBody');
+            tbody.innerHTML = '';
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="empty-registry">No entries found matching this inquiry.</td></tr>`;
+            } else {
+                filtered.forEach(r => {
+                    const tr = document.createElement('tr');
+                    const sign = r.type === 'income' ? '+' : '-';
+                    tr.innerHTML = `
+                        <td><strong>${r.desc}</strong></td>
+                        <td>${r.category}</td>
+                        <td>${r.date}</td>
+                        <td class="amount-col ${r.type}">${sign}$${Math.abs(r.amount).toFixed(2)}</td>
+                        <td><button class="delete-link" onclick="deleteRecord(${r.id})">Strike Out</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+
+        initCharts();
+        renderRegistry();
+    </script>
+</body>
+</html>
